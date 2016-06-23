@@ -3,7 +3,7 @@
 ## Installation
 
 ```
-composer require connectholland/rabbit-mq-message-bundle
+composer require connectholland/rabbit-mq-message-enrich-bundle dev-master
 ```
 
 Do no add the bundle to your AppKernel, there is no bundle class (required).
