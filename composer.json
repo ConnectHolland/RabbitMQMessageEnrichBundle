@@ -1,0 +1,24 @@
+{
+    "name": "connectholland/rabbit-mq-message-enrich-bundle",
+    "description": "Bundle to help enriching messages on a rabbit mq channel and putting them back on the channel (or another).",
+    "type": "library",
+    "require": {
+        "doctrine/doctrine-bundle": "^1.6",
+        "jms/serializer": "^1.1",
+        "php-amqplib/rabbitmq-bundle": "^1.10"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.4",
+        "mockery/mockery": "^0.9.5"
+    },
+    "autoload": {
+        "psr-4": { "ConnectHolland\\RabbitMQMessageEnrichBundle\\": "" }
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ron Rademaker",
+            "email": "ron@connectholland.nl"
+        }
+    ]
+}
