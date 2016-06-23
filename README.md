@@ -44,7 +44,7 @@ services:
         arguments: ["@doctrine", "FoobarBundle:User"]
     foobar_consumer:
         class: ConnectHolland\RabbitMQMessageEnrichBundle\Consumer\EnrichMessageConsumer
-        arguments: ["@userController", "@old_sound_rabbit_mq.foobar_producer_producer", "@jsm_serializer", "user_id", "user"]
+        arguments: ["@userController", "@old_sound_rabbit_mq.foobar_producer_producer", "@jms_serializer", "user_id", "user"]
 ```
 
 Enitity.User.yml
