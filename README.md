@@ -45,7 +45,7 @@ services:
     foobar_consumer:
         class: ConnectHolland\RabbitMQMessageEnrichBundle\Consumer\EnrichMessageConsumer
         arguments: ["@userController", "@old_sound_rabbit_mq.foobar_producer_producer", "@jsm_serializer", "user_id", "user"]
-``
+```
 
 Enitity.User.yml
 ``` yml
