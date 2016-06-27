@@ -53,6 +53,13 @@ class EnrichMessageConsumer implements ConsumerInterface
     private $objectField;
 
     /**
+     * Chain that should be enriched before enriching.
+     *
+     * @var array
+     */
+    private $chain;
+
+    /**
      * Create a new EnrichMessageConsumer.
      *
      * @param EnrichControllerInterface $controller
@@ -60,14 +67,22 @@ class EnrichMessageConsumer implements ConsumerInterface
      * @param Serializer $serializer
      * @param string $idField
      * @param string $objectField
+     * @param array $chain
      */
-    public function __construct(EnrichControllerInterface $controller, ProducerInterface $producer, Serializer $serializer, $idField, $objectField)
-    {
+    public function __construct(
+        EnrichControllerInterface $controller,
+        ProducerInterface $producer,
+        Serializer $serializer,
+        $idField,
+        $objectField,
+        array $chain = []
+    ) {
         $this->setController($controller);
         $this->setProducer($producer);
         $this->setSerializer($serializer);
         $this->idField = $idField;
         $this->objectField = $objectField;
+        $this->chain = $chain;
     }
 
     /**
@@ -152,7 +167,7 @@ class EnrichMessageConsumer implements ConsumerInterface
         if (array_key_exists('routing_key', $message->delivery_info)
             && false !== ($body = $this->parseBody($message))
             && property_exists($body, $this->idField)) {
-            if (!property_exists($body, $this->objectField)) {
+            if ($this->shouldEnrich($body)) {
                 $this->enrichMessage($body, $message->delivery_info['routing_key']);
             }
 
@@ -160,6 +175,23 @@ class EnrichMessageConsumer implements ConsumerInterface
         }
 
         return ConsumerInterface::MSG_SINGLE_NACK_REQUEUE;
+    }
+
+    /**
+     * Returns if the message should be enriched.
+     *
+     * @param stdClass $body
+     * @return bool
+     */
+    private function shouldEnrich(stdClass $body)
+    {
+        $shouldEnrich = !property_exists($body, $this->objectField);
+
+        foreach ($this->chain as $chainField) {
+            $shouldEnrich = $shouldEnrich && property_exists($body, $chainField);
+        }
+
+        return $shouldEnrich;
     }
 
     /**
