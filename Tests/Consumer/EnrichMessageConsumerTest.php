@@ -26,7 +26,7 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
      * @param array $incoming
      * @param bool $shouldEnrich
      */
-    public function testEnrichMessage(array $incoming, $shouldEnrich)
+    public function testEnrichMessage(array $incoming, $shouldEnrich, $chain = [])
     {
         $enriched = new stdClass;
         $enriched->foobar = 'foobar';
@@ -46,7 +46,7 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
         $message = new AMQPMessage(json_encode($incoming));
         $message->delivery_info['routing_key'] = 'baz';
 
-        $consumer = new EnrichMessageConsumer($controllerMock, $producerMock, $serializer, 'foobar_id', 'foobar');
+        $consumer = new EnrichMessageConsumer($controllerMock, $producerMock, $serializer, 'foobar_id', 'foobar', $chain);
         $consumer->execute($message);
 
         if ($shouldEnrich) {
@@ -69,6 +69,8 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
     {
         return [
             [['foobar_id' => 'foo'], true],
+            [['foobar_id' => 'foo'], false, ['foobaz']],
+            [['foobar_id' => 'foo', 'foobaz' => 'foobaz'], true, ['foobaz']],
             [['foobar_id' => 'foo', 'foobar' => ['foobar' => 'foobar']], false],
             [['foobar' => ['foobar' => 'foobar']], false]
         ];
