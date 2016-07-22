@@ -4,6 +4,7 @@ namespace ConnectHolland\RabbitMQMessageEnrichBundle\Consumer\Test;
 
 use ConnectHolland\RabbitMQMessageEnrichBundle\Consumer\EnrichMessageConsumer;
 use ConnectHolland\RabbitMQMessageEnrichBundle\Controller\EnrichControllerInterface;
+use ConnectHolland\RabbitMQMessageEnrichBundle\Util\PropertyAccessor;
 use JMS\Serializer\Serializer;
 use Mockery;
 use OldSound\RabbitMqBundle\RabbitMq\ProducerInterface;
@@ -26,7 +27,7 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
      * @param array $incoming
      * @param bool $shouldEnrich
      */
-    public function testEnrichMessage(array $incoming, $shouldEnrich, $chain = [])
+    public function testEnrichMessage(array $incoming, $shouldEnrich, $chain = [], $fieldId = 'foobar_id', $enrichLocation = 'foobar')
     {
         $enriched = new stdClass;
         $enriched->foobar = 'foobar';
@@ -46,17 +47,20 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
         $message = new AMQPMessage(json_encode($incoming));
         $message->delivery_info['routing_key'] = 'baz';
 
-        $consumer = new EnrichMessageConsumer($controllerMock, $producerMock, $serializer, 'foobar_id', 'foobar', $chain);
+        $consumer = new EnrichMessageConsumer($controllerMock, $producerMock, $serializer, $fieldId, $enrichLocation, $chain);
         $consumer->execute($message);
 
         if ($shouldEnrich) {
+            $this->assertTrue(array_key_exists('routing_key', $produced));
             $this->assertEquals('baz', $produced['routing_key']);
             $this->assertJson($produced['body']);
 
             $newMessage = json_decode($produced['body']);
-            $this->assertTrue(property_exists($newMessage, 'foobar'));
-            $this->assertTrue(property_exists($newMessage->foobar, 'foobar'));
-            $this->assertEquals('foobar', $newMessage->foobar->foobar);
+            $propertyAccessor = new PropertyAccessor($newMessage);
+
+            $this->assertTrue($propertyAccessor->exists($enrichLocation));
+            $this->assertTrue($propertyAccessor->exists($enrichLocation.'.foobar'));
+            $this->assertEquals('foobar', $propertyAccessor->get($enrichLocation.'.foobar'));
         } else {
             $this->assertEmpty($produced);
         }
@@ -72,7 +76,10 @@ class EnrichMessageConsumerTest extends PHPUnit_Framework_TestCase
             [['foobar_id' => 'foo'], false, ['foobaz']],
             [['foobar_id' => 'foo', 'foobaz' => 'foobaz'], true, ['foobaz']],
             [['foobar_id' => 'foo', 'foobar' => ['foobar' => 'foobar']], false],
-            [['foobar' => ['foobar' => 'foobar']], false]
+            [['foobar' => ['foobar' => 'foobar']], false],
+            [['foobar' => ['foobar_id' => 'foo']], true, [], 'foobar.foobar_id', 'foobar.foobar'],
+            [['foobar' => ['foobar_id' => 'foo']], false, ['foobar.baz'], 'foobar.foobar_id', 'foobar.foobar'],
+            [['foobar' => ['foobar_id' => 'foo', 'baz' => 'baz']], true, ['foobar.baz'], 'foobar.foobar_id', 'foobar.foobar']
         ];
     }
 }
