@@ -3,6 +3,7 @@
 namespace ConnectHolland\RabbitMQMessageEnrichBundle\Consumer;
 
 use ConnectHolland\RabbitMQMessageEnrichBundle\Controller\EnrichControllerInterface;
+use ConnectHolland\RabbitMQMessageEnrichBundle\Util\PropertyAccessor;
 use JMS\Serializer\Serializer;
 use OldSound\RabbitMqBundle\RabbitMq\ConsumerInterface;
 use OldSound\RabbitMqBundle\RabbitMq\Producer;
@@ -164,11 +165,10 @@ class EnrichMessageConsumer implements ConsumerInterface
      */
     public function execute(AMQPMessage $message)
     {
-        if (array_key_exists('routing_key', $message->delivery_info)
-            && false !== ($body = $this->parseBody($message))
-            && property_exists($body, $this->idField)) {
-            if ($this->shouldEnrich($body)) {
-                $this->enrichMessage($body, $message->delivery_info['routing_key']);
+        if (array_key_exists('routing_key', $message->delivery_info) && false !== ($body = $this->parseBody($message))) {
+            $propertyAccessor = new PropertyAccessor($body);
+            if ($propertyAccessor->exists($this->idField) && $this->shouldEnrich($propertyAccessor)) {
+                $this->enrichMessage($propertyAccessor, $message->delivery_info['routing_key']);
             }
 
             return ConsumerInterface::MSG_ACK;
@@ -180,15 +180,15 @@ class EnrichMessageConsumer implements ConsumerInterface
     /**
      * Returns if the message should be enriched.
      *
-     * @param stdClass $body
+     * @param PropertyAccessor $propertyAccessor
      * @return bool
      */
-    private function shouldEnrich(stdClass $body)
+    private function shouldEnrich(PropertyAccessor $propertyAccessor)
     {
-        $shouldEnrich = !property_exists($body, $this->objectField);
+        $shouldEnrich = !$propertyAccessor->exists($this->objectField);
 
         foreach ($this->chain as $chainField) {
-            $shouldEnrich = $shouldEnrich && property_exists($body, $chainField);
+            $shouldEnrich = $shouldEnrich && $propertyAccessor->exists($chainField);
         }
 
         return $shouldEnrich;
@@ -214,17 +214,17 @@ class EnrichMessageConsumer implements ConsumerInterface
     /**
      * Enrich the message and put it on the queue.
      *
-     * @param stdClass $message
+     * @param PropertyAccessor $propertyAccessor
      * @param string $routingKey
      */
-    private function enrichMessage(stdClass $message, $routingKey)
+    private function enrichMessage(PropertyAccessor $propertyAccessor, $routingKey)
     {
-        $object = $this->getController()->getObject($message->{$this->idField});
+        $object = $this->getController()->getObject($propertyAccessor->get($this->idField));
         if (is_object($object)) {
-            $message->{$this->objectField} = json_decode($this->serializer->serialize($object, 'json'));
+            $propertyAccessor->set($this->objectField, json_decode($this->serializer->serialize($object, 'json')));
 
             $this->getProducer()->setContentType('application/json')
-                ->publish(json_encode($message), $routingKey);
+                ->publish(json_encode($propertyAccessor->getObject()), $routingKey);
         }
     }
 }

@@ -1,5 +1,8 @@
 # ConnectHolland Rabbit MQ Message Enrich Bundle
 
+## Disclaimer
+This bundle assumes you serialize your messages as json.
+
 ## Installation
 
 ```
@@ -66,3 +69,12 @@ FoobarBundle\Entity\User:
             expose: true
 
 ```
+
+## Nested enrichment
+You can enrich nested parts of the message, for example ```foo``` in the following message:
+
+``` json
+{ foobar: { foo : "bar" } }
+```
+
+Use dot notation to access the nested items, in this case ```foobar.foo```.
