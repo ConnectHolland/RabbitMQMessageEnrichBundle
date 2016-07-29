@@ -61,6 +61,13 @@ class EnrichMessageConsumer implements ConsumerInterface
     private $chain;
 
     /**
+     * Routing key to publish to.
+     *
+     * @var string
+     */
+    private $routingKey;
+
+    /**
      * Create a new EnrichMessageConsumer.
      *
      * @param EnrichControllerInterface $controller
@@ -76,7 +83,8 @@ class EnrichMessageConsumer implements ConsumerInterface
         Serializer $serializer,
         $idField,
         $objectField,
-        array $chain = []
+        array $chain = [],
+        $routingKey = null
     ) {
         $this->setController($controller);
         $this->setProducer($producer);
@@ -84,6 +92,7 @@ class EnrichMessageConsumer implements ConsumerInterface
         $this->idField = $idField;
         $this->objectField = $objectField;
         $this->chain = $chain;
+        $this->routingKey = $routingKey;
     }
 
     /**
@@ -168,7 +177,7 @@ class EnrichMessageConsumer implements ConsumerInterface
         if (array_key_exists('routing_key', $message->delivery_info) && false !== ($body = $this->parseBody($message))) {
             $propertyAccessor = new PropertyAccessor($body);
             if ($propertyAccessor->exists($this->idField) && $this->shouldEnrich($propertyAccessor)) {
-                $this->enrichMessage($propertyAccessor, $message->delivery_info['routing_key']);
+                $this->enrichMessage($propertyAccessor, $this->routingKey ?: $message->delivery_info['routing_key']);
             }
 
             return ConsumerInterface::MSG_ACK;
